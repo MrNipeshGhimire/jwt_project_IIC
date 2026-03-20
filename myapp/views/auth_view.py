@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from ..serializer import UserSerializer
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 
 @api_view(['POST'])
@@ -34,8 +36,40 @@ def register_view(request):
         else:
             return Response({"error":"Failed to register user "})
 
+
+def get_token_for_user(user):
+    tokens = RefreshToken.for_user(user)
+    return {
+        'refresh':str(tokens),
+        'access': str(tokens.access_token)
+    }
+
         
-    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    errors = {}
+    if request.method == 'POST':
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username:
+            errors['username'] = "Username is required"
+        
+        if not password:
+            errors['password'] = "Password is required"
+        
+        if errors:
+            return Response({"error":errors}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+           user =  authenticate(username=username, password=password)
+           if user is not None:
+              token =  get_token_for_user(user)
+              return Response({"msg":"User logged in successfully","token":token},status=status.HTTP_200_OK)
+           else:
+               return Response({"error":"Invalid credintals"})
+            
+
 
 
     
